@@ -1,9 +1,16 @@
-import { Geist, Geist_Mono } from "next/font/google";
+import { Geist, Geist_Mono, Montserrat_Alternates } from "next/font/google";
 import "./globals.css";
+
+const montserratAlt = Montserrat_Alternates({
+  variable: "--font-mont-alt",
+  subsets: ["latin"],
+  weight: '500'
+});
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
   subsets: ["latin"],
+
 });
 
 const geistMono = Geist_Mono({
@@ -20,9 +27,10 @@ export default function RootLayout({ children }) {
   return (
     <html
       lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      className={`${montserratAlt.className} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col">{children}</body>
+
+      <body className={`min-h-full flex flex-col ${montserratAlt.className} bg-[#424B54]`}>{children}</body>
     </html>
   );
 }
