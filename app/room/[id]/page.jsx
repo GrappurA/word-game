@@ -1,15 +1,25 @@
 "use client"
 import { io } from "socket.io-client"
-import React, { useEffect } from "react"
+import { useState, useEffect, use } from "react"
 import UserInRoom from "@/app/ReactComponents/UserInRoom"
 
 const socket = io()
 
 export default function Room({ params }) {
-    const { id: rmId } = React.use(params)
-    const [roomId, setRoomId] = React.useState(rmId)
-    const [inRoom, setInRoom] = React.useState([])
-    const [userId, setUserId] = React.useState(0)
+    const { id: rmId } = use(params)
+    const [roomId, setRoomId] = useState(rmId)
+    const [inRoom, setInRoom] = useState([])
+    const [userId, setUserId] = useState('Connecting...')
+    const [voters, setVoters] = useState([])
+
+    function handleStart() {
+        if (voters.includes(userId))
+            return
+
+        setVoters(prev => {
+            return [...prev, userId]
+        })
+    }
 
     useEffect(() => {
         setUserId(socket.id)
@@ -47,18 +57,30 @@ export default function Room({ params }) {
         })
     }, [roomId])
 
-
     return (
         <>
-            <p>socket id: {userId}</p>
-            <p>room id: {roomId}</p>
-            <p>users in this room: {inRoom.length}</p>
+            <div className="flex">
 
-            <div>
-                {inRoom.map((id) => {
-                    <UserInRoom userId={id} />
-                })}
+                <div className="bg-[#424b54] rounded-2xl border-[#EBCFB2] border-4 m-2 p-2 w-fit text-3xl">
+                    <p>Your id: <u>{userId}</u></p>
+                    <p>Room number: <b className="text-4xl">{roomId}</b></p>
+                    <p>People in a Room: <b className="text-4xl">{inRoom.length}</b></p>
+                </div>
+
+                {inRoom.length > 1 &&
+                    <div className="border-3 border-[#EBCFB2] rounded-3xl p-2 m-2">
+                        <button onClick={handleStart} className="text-3xl border-5 border-green-200 rounded-2xl p-2 m-2 active:scale-110 transition-transform">Start Game!</button>
+                        <p className="text-2xl">Votes: {voters || 0}</p>
+                    </div>}
+
             </div>
+
+            <div className="flex">
+                {inRoom.map((id) => (
+                    <UserInRoom key={id} userId={id} hasVoted={voters.includes(userId)} />
+                ))}
+            </div>
+
         </>
     )
 }
