@@ -13,21 +13,51 @@ nextApp.prepare().then(() => {
 
     const io = new Server(server)
 
+    async function getUserIds(data) {
+        const inRoom = await io.in(data.roomId).fetchSockets()
+        const userIds = inRoom.map(user => { return user.id })
+        return userIds;
+    }
+
     io.on('connection', (socket) => {
         console.log(`User connected: ${socket.id}`)
 
         //socket.emit('connect_user', { message: `Welcome ${socket.id} to Next.js!` });
 
-        socket.on('join-room', (data) => {
+        socket.on('join-room', async (data) => {
             socket.join(data.roomId)
+
+            const userIds = await getUserIds(data)
+
             console.log(`user ${socket.id} connected to room:${data.roomId}`)
-            io.to(data.roomId).emit('join-room', { userId: socket.id, roomId: data.roomId })
+            io.to(data.roomId).emit('join-room', { /*userId: socket.id, roomId: data.roomId,*/ userIds: userIds })
         })
 
-        socket.on('get-others', (data) => {
-            console.log(io.in(data.roomId).)
-            //io.to(socket.id).emit('get-others', { others.})
+        socket.on('leave-room-client', async (data) => {
+            socket.leave(data.roomId)
+            const userIds = await getUserIds(data)
+            console.log(`user left room ${socket.id} | ${userIds.length}`)
+            io.to(data.roomId).emit('leave-room-server', { userIds: userIds })
         })
+
+        socket.on('get-others-client', async (data) => {
+            console.log("get others request " + socket.id)
+
+            const userIds = await getUserIds(data)
+            console.log(userIds)
+
+            socket.emit('get-others-server', { userIds: userIds })
+        })
+
+        socket.on('disconnecting', () => {
+            for (const room of socket.rooms) {
+                if (room != socket.id) {
+                    io.to(room).emit('someone-left-room')
+                    console.log("socket disconnection" + room)
+                }
+            }
+            console.log(`User disconnected: ${socket.id}`);
+        });
 
         socket.on('disconnect', () => {
             console.log(`User disconnected: ${socket.id}`);

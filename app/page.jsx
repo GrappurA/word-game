@@ -1,30 +1,23 @@
 "use client"
 import React, { useEffect } from "react";
 import Popup from "./ReactComponents/Popup";
-import { io } from "socket.io-client";
 
 import { useRouter } from 'next/navigation';
 
-const socket = io();
-
-
 export default function Home() {
 
-  const [isWaiting, setIsWaiting] = React.useState(true);
+  const [isWaiting, setIsWaiting] = React.useState(false);
   const router = useRouter()
 
-  useEffect(() => {
-    socket.on('join-room', (data) => {
-
-    })
-
-  }, [])
 
   function handleJoin(e) {
     e.preventDefault();
+
     const formData = new FormData(e.target);
     const roomId = formData.get('roomId')
-    socket.emit('join-room', { roomId: roomId })
+
+    setIsWaiting(true)
+
     const route = `/room/${roomId}`
     router.push(route)
   }
