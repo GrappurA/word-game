@@ -27,15 +27,16 @@ export default function Room({ params }) {
             setUserId(socket.id)
         })
 
-        socket.emit('join-room', { roomId: roomId })
+        socket.emit('join-room', { roomId: roomId, })
         socket.emit('get-others-client', { roomId: roomId });
 
         socket.on('get-others-server', (data) => {
-            setInRoom(data.userIds || [])
+            setInRoom(data.users || [])
         })
 
         socket.on('join-room', (data) => {
-            setInRoom(data.userIds)
+            setInRoom(data.users)
+
         })
 
         socket.on('leave-room-server', (data) => {
@@ -70,14 +71,14 @@ export default function Room({ params }) {
                 {inRoom.length > 1 &&
                     <div className="border-3 border-[#EBCFB2] rounded-3xl p-2 m-2">
                         <button onClick={handleStart} className="text-3xl border-5 border-green-200 rounded-2xl p-2 m-2 active:scale-110 transition-transform">Start Game!</button>
-                        <p className="text-2xl">Votes: {voters || 0}</p>
+                        <p className="text-2xl">Votes: {voters.length || 0}</p>
                     </div>}
 
             </div>
 
             <div className="flex">
-                {inRoom.map((id) => (
-                    <UserInRoom key={id} userId={id} hasVoted={voters.includes(userId)} />
+                {inRoom.map((user) => (
+                    <UserInRoom key={user.id} userId={user.id} hasVoted={voters.includes(user.id)} imageIndex={user.imageIndex} />
                 ))}
             </div>
 

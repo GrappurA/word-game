@@ -1,7 +1,9 @@
-const express = require('express');
-const http = require('http');
-const { Server } = require('socket.io');
-const next = require('next');
+import express from 'express';
+import http from 'http';
+import { Server } from 'socket.io';
+import next from 'next';
+
+import images from './public/images/images.js'; // You MUST add .js
 
 const dev = process.env.NODE_ENV !== 'production'
 const nextApp = next({ dev })
@@ -12,25 +14,30 @@ nextApp.prepare().then(() => {
     const server = http.createServer(app)
 
     const io = new Server(server)
+    const userAvatars = {}
 
     async function getUserIds(data) {
         const inRoom = await io.in(data.roomId).fetchSockets()
-        const userIds = inRoom.map(user => { return user.id })
+        const userIds = inRoom.map(user => { return { id: user.id, imageIndex: userAvatars[user.id] } })
         return userIds;
     }
 
     io.on('connection', (socket) => {
         console.log(`User connected: ${socket.id}`)
 
-        //socket.emit('connect_user', { message: `Welcome ${socket.id} to Next.js!` });
+        //rand index for an avatar
+        const randomIndex = Math.floor(Math.random() * images.length)
+
+        //set the index for an avatar
+        userAvatars[socket.id] = randomIndex
 
         socket.on('join-room', async (data) => {
             socket.join(data.roomId)
 
-            const userIds = await getUserIds(data)
+            const users = await getUserIds(data)
 
             console.log(`user ${socket.id} connected to room:${data.roomId}`)
-            io.to(data.roomId).emit('join-room', { /*userId: socket.id, roomId: data.roomId,*/ userIds: userIds })
+            io.to(data.roomId).emit('join-room', { users: users })
         })
 
         socket.on('leave-room-client', async (data) => {
@@ -43,10 +50,8 @@ nextApp.prepare().then(() => {
         socket.on('get-others-client', async (data) => {
             console.log("get others request " + socket.id)
 
-            const userIds = await getUserIds(data)
-            console.log(userIds)
-
-            socket.emit('get-others-server', { userIds: userIds })
+            const users = await getUserIds(data)
+            socket.emit('get-others-server', { users: users })
         })
 
         socket.on('disconnecting', () => {

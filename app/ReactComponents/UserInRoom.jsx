@@ -1,23 +1,10 @@
 import { useState } from "react"
 import Image from "next/image"
+import images from "@/public/images/images"
+export default function UserInRoom({ userId, hasVoted, imageIndex }) {
 
-export default function UserInRoom({ userId, hasVoted }) {
-
-    const images = [
-        '/images/1.png',
-        '/images/2.png',
-        '/images/3.png',
-        '/images/4.png',
-        '/images/5.png',
-        '/images/6.png',
-        '/images/7.png',
-        '/images/8.png',
-        '/images/9.png',
-        '/images/10.png',
-    ]
     const [image] = useState(() => {
-        const randomIndex = Math.floor(Math.random() * images.length)
-        return images[randomIndex]
+        return images[imageIndex]
     })
 
     return (
