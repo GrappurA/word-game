@@ -14,11 +14,13 @@ nextApp.prepare().then(() => {
     const server = http.createServer(app)
 
     const io = new Server(server)
-    const userAvatars = {}
+    const userData = {}
+    const roomVotes = {}
+    const roomObject = {}
 
-    async function getUserIds(data) {
+    async function getUsersInRoom(data) {
         const inRoom = await io.in(data.roomId).fetchSockets()
-        const userIds = inRoom.map(user => { return { id: user.id, imageIndex: userAvatars[user.id] } })
+        const userIds = inRoom.map(user => { return { id: user.id, username: data.username || "Anon", imageIndex: userData[user.id] || "1" } })
         return userIds;
     }
 
@@ -29,20 +31,24 @@ nextApp.prepare().then(() => {
         const randomIndex = Math.floor(Math.random() * images.length)
 
         //set the index for an avatar
-        userAvatars[socket.id] = randomIndex
 
-        socket.on('join-room', async (data) => {
-            socket.join(data.roomId)
+        socket.on('join-room-client', async (data) => {
+            const { username, roomId } = data
+            socket.join(roomId)
 
-            const users = await getUserIds(data)
+            userData[socket.id] = {
+                imageIndex: randomIndex,
+                username: username
+            }
+            const users = await getUsersInRoom(data)
 
-            console.log(`user ${socket.id} connected to room:${data.roomId}`)
-            io.to(data.roomId).emit('join-room', { users: users })
+            console.log(`user ${username} |${socket.id}| connected to room:${roomId}`)
+            io.to(roomId).emit('join-room-server', { users: users })
         })
 
         socket.on('leave-room-client', async (data) => {
             socket.leave(data.roomId)
-            const userIds = await getUserIds(data)
+            const userIds = await getUsersInRoom(data)
             console.log(`user left room ${socket.id} | ${userIds.length}`)
             io.to(data.roomId).emit('leave-room-server', { userIds: userIds })
         })
@@ -50,8 +56,36 @@ nextApp.prepare().then(() => {
         socket.on('get-others-client', async (data) => {
             console.log("get others request " + socket.id)
 
-            const users = await getUserIds(data)
+            const users = await getUsersInRoom(data)
             socket.emit('get-others-server', { users: users })
+        })
+
+        socket.on('user-voted-client', async (data) => {
+            const { roomId } = data
+            //create new set 
+            if (!roomVotes[roomId]) {
+                roomVotes[roomId] = new Set();
+            }
+
+            //add users
+            roomVotes[roomId].add(socket.id)
+            //convert to array
+            let votesInRoom = Array.from(roomVotes[roomId])
+            //tell the room about voters
+            io.to(roomId).emit('user-voted-server', { userIds: votesInRoom })
+
+            console.log(`user ${socket.id} voted to start the game!`)
+
+            const inRoom = await io.in(roomId).fetchSockets()
+            if (inRoom.length > 1 && votesInRoom.length === votesInRoom.length) {
+                console.log('game starts in room:' + roomId)
+
+                //start the game in room object
+                roomObject.isStarted = true
+                io.to(roomId).emit('game-start-server', { isStarted: roomObject.isStarted })
+                console.log(roomObject)
+            }
+
         })
 
         socket.on('disconnecting', () => {
@@ -65,6 +99,7 @@ nextApp.prepare().then(() => {
         });
 
         socket.on('disconnect', () => {
+            delete userData[socket.id]
             console.log(`User disconnected: ${socket.id}`);
         });
     })

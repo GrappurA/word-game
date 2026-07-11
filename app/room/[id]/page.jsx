@@ -7,36 +7,47 @@ const socket = io()
 
 export default function Room({ params }) {
     const { id: rmId } = use(params)
+
     const [roomId, setRoomId] = useState(rmId)
-    const [inRoom, setInRoom] = useState([])
     const [userId, setUserId] = useState('Connecting...')
+    const [inRoom, setInRoom] = useState([])
     const [voters, setVoters] = useState([])
+    const [username, setUsername] = useState('loading...')
 
     function handleStart() {
         if (voters.includes(userId))
             return
 
-        setVoters(prev => {
-            return [...prev, userId]
-        })
+        socket.emit('user-voted-client', { roomId: roomId, })
     }
 
     useEffect(() => {
+        const storedUsername = sessionStorage.getItem('username') || 'Anonymous'
+        setUsername(storedUsername)
+
         setUserId(socket.id)
+
         socket.on('connect', () => {
             setUserId(socket.id)
         })
 
-        socket.emit('join-room', { roomId: roomId, })
+        socket.emit('join-room-client', { roomId: roomId, username: storedUsername })
         socket.emit('get-others-client', { roomId: roomId });
 
         socket.on('get-others-server', (data) => {
             setInRoom(data.users || [])
         })
 
-        socket.on('join-room', (data) => {
+        socket.on('join-room-server', (data) => {
             setInRoom(data.users)
+        })
 
+        socket.on('user-voted-server', (data) => {
+            setVoters(data.userIds)
+        })
+
+        socket.on('game-start-server', () => {
+            //game start logic here
         })
 
         socket.on('leave-room-server', (data) => {
@@ -52,18 +63,19 @@ export default function Room({ params }) {
 
             socket.off('connect')
             socket.off('get-others-server')
-            socket.off('join-room')
+            socket.off('join-room-server')
             socket.off('leave-room-server')
             socket.off('someone-left-room')
+            socket.off('user-voted-server')
+            socket.off('game-start-server')
         })
     }, [roomId])
 
     return (
         <>
             <div className="flex">
-
                 <div className="bg-[#424b54] rounded-2xl border-[#EBCFB2] border-4 m-2 p-2 w-fit text-3xl">
-                    <p>Your id: <u>{userId}</u></p>
+                    <p>Your username: <u>{username}</u></p>
                     <p>Room number: <b className="text-4xl">{roomId}</b></p>
                     <p>People in a Room: <b className="text-4xl">{inRoom.length}</b></p>
                 </div>
@@ -78,7 +90,7 @@ export default function Room({ params }) {
 
             <div className="flex">
                 {inRoom.map((user) => (
-                    <UserInRoom key={user.id} userId={user.id} hasVoted={voters.includes(user.id)} imageIndex={user.imageIndex} />
+                    <UserInRoom key={user.id} userId={user.id} hasVoted={voters.includes(user.id)} imageIndex={user.imageIndex.imageIndex} username={user.imageIndex.username} />
                 ))}
             </div>
 
