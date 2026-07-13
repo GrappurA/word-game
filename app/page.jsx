@@ -40,10 +40,10 @@ export default function Home() {
             <p className="text-center mb-5 text-xl underline decoration-[#E1CE7A] underline-offset-10 decoration-[2px]">Type anything to Join / Create a lobby</p>
 
             <form onSubmit={handleJoin} className="grid  rounded-2xl border-4 border-white overflow-hidden ">
-              <input required type="text" id="roomId" name='roomId' className="bg-gray-700 p-2 text-xl h-[40px] tracking-wider" placeholder="room id..." />
+              <input autoComplete="off" required type="text" id="roomId" name='roomId' className="bg-gray-700 p-2 text-xl h-[40px] tracking-wider" placeholder="room id..." />
               <hr className="h-[4px] bg-white" />
 
-              <input required type="text" name="username" id="username" placeholder="username" className=" outline-none bg-gray-700 p-2 text-xl h-[40px] tracking-wider " />
+              <input autoComplete="off" required type="text" name="username" id="username" placeholder="username" className=" outline-none bg-gray-700 p-2 text-xl h-[40px] tracking-wider " />
               <hr className="h-[4px] bg-white" />
 
               <button type="submit" className="ml-auto mr-auto w-full rounded-2xl m-3 text-3xl hover:scale-110 active:scale-115">Join!</button>

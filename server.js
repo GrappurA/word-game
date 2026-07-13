@@ -24,6 +24,10 @@ nextApp.prepare().then(() => {
         return userIds;
     }
 
+    function pickRandomTopic(topics) {
+        return topics[Math.floor(Math.random() * topics.length)]
+    }
+
     io.on('connection', (socket) => {
         console.log(`User connected: ${socket.id}`)
 
@@ -49,7 +53,13 @@ nextApp.prepare().then(() => {
         socket.on('leave-room-client', async (data) => {
             socket.leave(data.roomId)
             const userIds = await getUsersInRoom(data)
+
             console.log(`user left room ${socket.id} | ${userIds.length}`)
+
+            if (roomVotes[data.roomId]) {
+                roomVotes[data.roomId].delete(socket.id)
+
+            }
             io.to(data.roomId).emit('leave-room-server', { userIds: userIds })
         })
 
@@ -61,11 +71,19 @@ nextApp.prepare().then(() => {
         })
 
         socket.on('user-voted-client', async (data) => {
-            const { roomId } = data
+            const { roomId, topic } = data
+
             //create new set 
             if (!roomVotes[roomId]) {
                 roomVotes[roomId] = new Set();
             }
+
+            //update topic in room obj
+            if (!roomObject[roomId])
+                roomObject[roomId] = { isStarted: false, topics: [] }
+            roomObject[roomId].topics.push(topic)
+
+
 
             //add users
             roomVotes[roomId].add(socket.id)
@@ -77,13 +95,20 @@ nextApp.prepare().then(() => {
             console.log(`user ${socket.id} voted to start the game!`)
 
             const inRoom = await io.in(roomId).fetchSockets()
-            if (inRoom.length > 1 && votesInRoom.length === votesInRoom.length) {
+
+            if (inRoom.length > 1 && votesInRoom.length === inRoom.length) {
                 console.log('game starts in room:' + roomId)
 
                 //start the game in room object
-                roomObject.isStarted = true
-                io.to(roomId).emit('game-start-server', { isStarted: roomObject.isStarted })
+                if (roomObject[roomId].topics.length === inRoom.length) {
+                    const randomTopic = pickRandomTopic(roomObject[roomId].topics)
+                    console.log(randomTopic)
+                    roomObject[roomId].isStarted = true
+                    io.to(roomId).emit('game-start-server', { isStarted: true, topic: randomTopic })
+                }
+
                 console.log(roomObject)
+                roomVotes[roomId].clear()
             }
 
         })
@@ -91,6 +116,10 @@ nextApp.prepare().then(() => {
         socket.on('disconnecting', () => {
             for (const room of socket.rooms) {
                 if (room != socket.id) {
+                    if (roomVotes[room]) {
+                        roomVotes[room].delete(socket.id)
+                    }
+
                     io.to(room).emit('someone-left-room')
                     console.log("socket disconnection" + room)
                 }
